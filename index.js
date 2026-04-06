@@ -11,7 +11,7 @@
     const honk = new Audio("https://www.myinstants.com/media/sounds/honk-sound.mp3");
     honk.volume = 0.4;
 
-    // ===== LOAD SAVED POSITION =====
+    // ===== LOAD POSITION =====
     const saved = localStorage.getItem("goose-pos");
     if (saved) {
       const pos = JSON.parse(saved);
@@ -21,39 +21,45 @@
       btn.style.bottom = "auto";
     }
 
-    // ===== CLICK HONK =====
-    btn.addEventListener("click", () => {
-      const s = honk.cloneNode();
-      s.playbackRate = 0.9 + Math.random() * 0.2;
-      s.play();
-    });
-
-    // ===== DRAG =====
+    // ===== DRAG (FIXED VERSION) =====
     let isDragging = false;
-    let offsetX, offsetY;
+    let startX, startY, offsetX, offsetY;
 
-    btn.addEventListener("mousedown", (e) => {
-      isDragging = true;
+    btn.addEventListener("pointerdown", (e) => {
+      isDragging = false;
 
       const rect = btn.getBoundingClientRect();
+
+      startX = e.clientX;
+      startY = e.clientY;
+
       offsetX = e.clientX - rect.left;
       offsetY = e.clientY - rect.top;
 
+      btn.setPointerCapture(e.pointerId);
+
+      // chuyển sang left/top
       btn.style.left = rect.left + "px";
       btn.style.top = rect.top + "px";
       btn.style.right = "auto";
       btn.style.bottom = "auto";
-
-      document.body.style.userSelect = "none";
     });
 
-    document.addEventListener("mousemove", (e) => {
+    btn.addEventListener("pointermove", (e) => {
+      const dx = Math.abs(e.clientX - startX);
+      const dy = Math.abs(e.clientY - startY);
+
+      // chỉ bắt đầu drag nếu di chuyển đủ xa (tránh click bị hiểu thành drag)
+      if (!isDragging && (dx > 5 || dy > 5)) {
+        isDragging = true;
+      }
+
       if (!isDragging) return;
 
       let x = e.clientX - offsetX;
       let y = e.clientY - offsetY;
 
-      // ===== GIỚI HẠN TRONG MÀN =====
+      // giới hạn màn hình
       const maxX = window.innerWidth - btn.offsetWidth;
       const maxY = window.innerHeight - btn.offsetHeight;
 
@@ -64,13 +70,18 @@
       btn.style.top = y + "px";
     });
 
-    document.addEventListener("mouseup", () => {
-      if (!isDragging) return;
-      isDragging = false;
+    btn.addEventListener("pointerup", (e) => {
+      btn.releasePointerCapture(e.pointerId);
 
-      document.body.style.userSelect = "";
+      // nếu không drag → coi như click
+      if (!isDragging) {
+        const s = honk.cloneNode();
+        s.playbackRate = 0.9 + Math.random() * 0.2;
+        s.play();
+        return;
+      }
 
-      // ===== SNAP EDGE =====
+      // SNAP EDGE
       const rect = btn.getBoundingClientRect();
       const midX = window.innerWidth / 2;
 
@@ -80,7 +91,7 @@
         btn.style.left = (window.innerWidth - btn.offsetWidth - 10) + "px";
       }
 
-      // ===== SAVE POSITION =====
+      // SAVE
       localStorage.setItem("goose-pos", JSON.stringify({
         left: btn.style.left,
         top: btn.style.top
@@ -93,7 +104,6 @@
       btn.style.top = "auto";
       btn.style.right = "20px";
       btn.style.bottom = "20px";
-
       localStorage.removeItem("goose-pos");
     });
   }
@@ -101,7 +111,6 @@
   function init() {
     createButton();
     setTimeout(createButton, 1000);
-    setTimeout(createButton, 3000);
   }
 
   if (document.readyState === "loading") {
