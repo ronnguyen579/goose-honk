@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "author": "You",
   "description": "Adds a floating goose honk button.",
-  "main": "index.js",
+  "js": "index.js",
   "css": "style.css"
 }
